@@ -1,0 +1,1 @@
+require File.expand_path('../paparazzi/camera', __FILE__)

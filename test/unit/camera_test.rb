@@ -67,6 +67,28 @@ class CameraTest < Test::Unit::TestCase
     assert_not_equal(previous_folder_contents,Dir["#{destination}/weekly/*"])
   end
   
+  def test_gracefully_recovers_if_last_hourly_snapshot_ended_prematurely
+    Paparazzi::Camera.instance_variable_set('@start_time',Time.now - 7200)
+    Paparazzi::Camera.trigger(default_test_settings)
+    successful_snapshot_name = Paparazzi::Camera.send(:current_snapshot_name,:hourly)
+    
+    Paparazzi::Camera.instance_variable_set('@start_time',Time.now - 3600)
+    Paparazzi::Camera.trigger(default_test_settings)
+    failed_snapshot_name = Paparazzi::Camera.send(:current_snapshot_name,:hourly)
+    
+    Paparazzi::Camera.send(:last_successful_hourly_snapshot=,successful_snapshot_name)
+    assert_equal(2,Dir["#{destination}/hourly/*"].size)
+    assert_equal(successful_snapshot_name,YAML.load_file("#{destination}/.paparazzi.yml")[:last_successful_snapshot])
+    
+    Paparazzi::Camera.instance_variable_set('@start_time',Time.now)
+    Paparazzi::Camera.trigger(default_test_settings)
+    
+    assert_equal(2,Dir["#{destination}/hourly/*"].size)
+    assert(Dir["#{destination}/hourly/*"].include?("#{destination}/hourly/#{successful_snapshot_name}"))
+    assert(!Dir["#{destination}/hourly/*"].include?("#{destination}/hourly/#{failed_snapshot_name}"))
+  end
+  
+  
   #######
   private
   #######
@@ -78,7 +100,7 @@ class CameraTest < Test::Unit::TestCase
   def default_test_settings
     @default_test_settings ||= {
       :source => "#{File.expand_path('../../source',  __FILE__)}/",
-      :destination => File.expand_path('../../destination',  __FILE__),
+      :destination => destination,
       :rsync_flags => '-L'
     }
   end

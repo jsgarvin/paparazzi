@@ -47,7 +47,7 @@ module Paparazzi
         end
         
         if @previous_snapshot_name[:hourly] != last_successful_hourly_snapshot and !last_successful_hourly_snapshot.nil? and File.exists?(destination(:hourly) + '/' + last_successful_hourly_snapshot)
-          File.rename(previous_target(:hourly), current_target(:hourly))
+          File.rename(previous_snapshot(:hourly), current_snapshot(:hourly))
           @previous_snapshot_name[:hourly] = last_successful_hourly_snapshot
         end
       end
@@ -80,13 +80,12 @@ module Paparazzi
         FREQUENCIES.each do |frequency|
           Dir.mkdir(current_snapshot(frequency)) unless File.exists?(current_snapshot(frequency))
           if frequency == :hourly and previous_snapshot_name(frequency) == ''
-            system 'rsync', *(['-aq', '--delete'] + [rsync_flags] + [source, current_snapshot(frequency)])          
+            system 'rsync', *(['-aq', '--delete'] + [rsync_flags] + [source, current_snapshot(frequency)])
+            self.last_successful_hourly_snapshot = current_snapshot_name(:hourly)
           elsif previous_snapshot_name(frequency) != current_snapshot_name(frequency)
             system 'rsync', *(['-aq', '--delete', "--link-dest=#{link_destination(frequency)}"] + [rsync_flags] + [source, current_snapshot(frequency)])
+            self.last_successful_hourly_snapshot = current_snapshot_name(:hourly)
           end
-        end
-        unless previous_snapshot_name(:hourly) == current_snapshot_name(:hourly)
-          self.last_successful_hourly_snapshot = current_snapshot_name(:hourly)
         end
       end
       
@@ -103,6 +102,10 @@ module Paparazzi
           when :monthly then @start_time.strftime("%Y-%m")
           when :yearly  then @start_time.strftime("%Y")
         end
+      end
+      
+      def previous_snapshot(frequency)
+        destination(frequency) + '/' + previous_snapshot_name(frequency)
       end
       
       def previous_snapshot_name(frequency)

@@ -24,7 +24,7 @@ Usage
 
 Create a ruby script that you'll run hourly from a cron.
  
-    require 'rubygems' #unless you use some other gem package manager
+    require 'rubygems' #unless you use another gem package manager
     require 'paparazzi'
     
     settings = {
@@ -39,7 +39,7 @@ Create a ruby script that you'll run hourly from a cron.
 How it works.
 -------------
 
-Paparazzi uses to rsync's ability to make hard links to files that haven't changed from previous
+Paparazzi uses rsync's ability to make hard links to files that haven't changed from previous
 backups. So, even though multiple incremental versions of the entire directory are kept, only a single
 copy of unique files are kept, with multiple hard links in separate snapshots pointing to the same
 file.

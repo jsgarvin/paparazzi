@@ -17,7 +17,7 @@ class CameraTest < Test::Unit::TestCase
   
   def test_should_store_valid_settings_in_attr_accessors
     Paparazzi::Camera.trigger(default_test_settings)
-    [:source,:destination,:rsync_flags].each do |setting_name|
+    [:source,:destination].each do |setting_name|
       assert_equal(default_test_settings[setting_name],Paparazzi::Camera.send(setting_name),setting_name)
     end
   end
@@ -93,6 +93,11 @@ class CameraTest < Test::Unit::TestCase
     assert_equal(5,File.stat("#{destination}/hourly/#{Paparazzi::Camera.send(:current_snapshot_name,:hourly)}/test.txt").nlink)   
   end
   
+  def test_excluded_files_are_not_backed_up
+    Paparazzi::Camera.trigger(default_test_settings)
+    assert(!File.exists?("#{destination}/hourly/#{Paparazzi::Camera.send(:current_snapshot_name,:hourly)}/test.exclude"))
+  end
+  
   #######
   private
   #######
@@ -102,10 +107,10 @@ class CameraTest < Test::Unit::TestCase
   end
   
   def default_test_settings
-    @default_test_settings ||= {
+    {
       :source => "#{File.expand_path('../../source',  __FILE__)}/",
       :destination => destination,
-      :rsync_flags => '-L'
+      :rsync_flags => '-L --exclude test.exclude'
     }
   end
 end

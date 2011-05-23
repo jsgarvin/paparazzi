@@ -29,6 +29,9 @@ module Paparazzi
           if REQUIRED_SETTINGS.include?(setting_name) and settings[setting_name].nil?
             raise MissingSettingError, "#{setting_name} is required"
           else
+            if setting_name == :rsync_flags
+              settings[setting_name] = settings[setting_name].split(/\s/)
+            end
             self.send("#{setting_name}=",settings[setting_name])
           end
         end
@@ -80,10 +83,10 @@ module Paparazzi
         FREQUENCIES.each do |frequency|
           Dir.mkdir(current_snapshot(frequency)) unless File.exists?(current_snapshot(frequency))
           if frequency == :hourly and previous_snapshot_name(frequency) == ''
-            system 'rsync', *(['-aq', '--delete'] + [rsync_flags] + [source, current_snapshot(frequency)])
+            system 'rsync', *(['-aq', '--delete'] + rsync_flags + [source, current_snapshot(frequency)])
             self.last_successful_hourly_snapshot = current_snapshot_name(:hourly)
           elsif previous_snapshot_name(frequency) != current_snapshot_name(frequency)
-            system 'rsync', *(['-aq', '--delete', "--link-dest=#{link_destination(frequency)}"] + [rsync_flags] + [source, current_snapshot(frequency)])
+            system 'rsync', *(['-aq', '--delete', "--link-dest=#{link_destination(frequency)}"] + rsync_flags + [source, current_snapshot(frequency)])
             self.last_successful_hourly_snapshot = current_snapshot_name(:hourly)
           end
         end

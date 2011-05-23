@@ -88,6 +88,10 @@ class CameraTest < Test::Unit::TestCase
     assert(!Dir["#{destination}/hourly/*"].include?("#{destination}/hourly/#{failed_snapshot_name}"))
   end
   
+  def test_correct_hard_links_are_created_to_multiple_snapshots_of_same_file
+    Paparazzi::Camera.trigger(default_test_settings)
+    assert_equal(5,File.stat("#{destination}/hourly/#{Paparazzi::Camera.send(:current_snapshot_name,:hourly)}/test.txt").nlink)   
+  end
   
   #######
   private

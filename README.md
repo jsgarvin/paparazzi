@@ -30,8 +30,8 @@ Create a ruby script that you'll run hourly from a cron.
     settings = {
       :source => '/full/path/to/source/directory/',           # note the trailing '/'
       :destination => '/mnt/external_drive/backup_folder',
-      :rsync_flags => '-L'                                    # see 'man rsync' for available options.
-    }    
+      :rsync_flags => '-L  --exclude lost+found'              # see 'man rsync' for available options.
+    }                                                         # Paparazzi sends '-aq --delete', plus whatever you add.
 
     Paparazzi::Camera.trigger(settings)
     

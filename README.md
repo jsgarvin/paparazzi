@@ -36,6 +36,18 @@ Create a ruby script that you'll run hourly from a cron.
     Paparazzi::Camera.trigger(settings)
     
 
+Supported Operating Systems
+---------------------------
+
+Paparazzi is developed and tested on Ubuntu Linux and should work fine on all other flavors. As of version 0.1.1, all
+tests reportedly passed on Max OSX, and it is expected that Paparazzi will probably run very well in that environment
+(although it is not actively tested, so run at your own risk).
+
+It is highly unlikely that Paparazzi will run on an MS Windows based machine without a whole lot of TLC by the user,
+if it runs at all. At a minimum, the user will need to get rsync installed on the machine, possibly through cygwin,
+but this is not supported at all by the author and users are entirely on their own.
+
+
 How it works.
 -------------
 

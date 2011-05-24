@@ -56,14 +56,16 @@ class CameraTest < Test::Unit::TestCase
   
   def test_purges_out_expired_snapshots
     Dir.mkdir("#{destination}/weekly")
-    (1..5).each do |x|
+    Dir.mkdir("#{destination}/weekly/1")
+    sleep 1;
+    (2..5).each do |x|
       Dir.mkdir("#{destination}/weekly/#{x}")
-      sleep 1;
     end
     assert_equal(5,Dir["#{destination}/weekly/*"].size)
     previous_folder_contents = Dir["#{destination}/weekly/*"]
     Paparazzi::Camera.trigger(default_test_settings)
     assert_equal(5,Dir["#{destination}/weekly/*"].size)
+    assert(!File.exists?("#{destination}/weekly/1"))
     assert_not_equal(previous_folder_contents,Dir["#{destination}/weekly/*"])
   end
   
@@ -90,7 +92,11 @@ class CameraTest < Test::Unit::TestCase
   
   def test_correct_hard_links_are_created_to_multiple_snapshots_of_same_file
     Paparazzi::Camera.trigger(default_test_settings)
-    assert_equal(5,File.stat("#{destination}/hourly/#{Paparazzi::Camera.send(:current_snapshot_name,:hourly)}/test.txt").nlink)   
+    inode = File.stat("#{destination}/hourly/#{Paparazzi::Camera.send(:current_snapshot_name,:hourly)}/test.txt").ino
+    Paparazzi::Camera::FREQUENCIES.each do |frequency|
+      assert_equal(5,File.stat("#{destination}/#{frequency}/#{Paparazzi::Camera.send(:current_snapshot_name,frequency)}/test.txt").nlink)   
+      inode = File.stat("#{destination}/#{frequency}/#{Paparazzi::Camera.send(:current_snapshot_name,frequency)}/test.txt").ino
+    end
   end
   
   def test_excluded_files_are_not_backed_up

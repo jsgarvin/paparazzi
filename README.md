@@ -39,14 +39,14 @@ Create a ruby script that you'll run hourly from a cron.
 Available Settings
 ------------------
 
-  * `:source`      : **required** The source folder to be backed up. Trailing '/' recommended. See rsync manpage
+  * `:source`      **required** The source folder to be backed up. Trailing '/' recommended. See rsync manpage
                      for explanation of trailing '/' 
-  * `:destination` : **required** The destination folder for backups to be written to, preferably on a different
+  * `:destination` **required** The destination folder for backups to be written to, preferably on a different
                      physical drive.
-  * `:reserves`    : A hash of snapshot intervals and number of snapshots of each to keep before purging.
-                     default: {:hourly => 24, :daily => 7, :weekly => 5, :monthly => 12, :yearly => 9999} 
-  * `:rsync_flags` : additional flags to pass to rsync. Paparazzi uses -aq, --delete, & --link_dest, plus
-                     whatever you add. The author suggests considering -L and --exclude.
+  * `:reserves`    A hash of snapshot intervals and number of snapshots of each to keep before purging.
+                     default: `{:hourly => 24, :daily => 7, :weekly => 5, :monthly => 12, :yearly => 9999}` 
+  * `:rsync_flags` Additional flags to pass to rsync. Paparazzi uses `-aq`, `--delete`, & `--link_dest`, plus
+                     whatever you add. The author suggests considering `-L` and `--exclude`.
 
 
 Supported Operating Systems

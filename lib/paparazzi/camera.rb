@@ -1,6 +1,7 @@
 require 'admit_one'
 require 'yaml'
 require 'fileutils'
+require 'digest/md5'
 
 module Paparazzi
   class Camera
@@ -12,8 +13,8 @@ module Paparazzi
       
       def trigger(settings = {})
         validate_and_cache_settings(settings)
-        AdmitOne::LockFile.new(:paparazzi) do
-          initialize
+        AdmitOne::LockFile.new("paparazzi-#{Digest::MD5.hexdigest(destination)}") do
+          setup
           purge_old_snapshots
           make_snapshots
         end
@@ -40,7 +41,7 @@ module Paparazzi
         raise MissingFolderError, destination unless File.exist?(destination) and File.directory?(destination)
       end
       
-      def initialize
+      def setup
         @previous_snapshot_name = {}
         FREQUENCIES.each do |frequency|
           Dir.mkdir(destination(frequency)) unless File.exists?(destination(frequency)) && File.directory?(destination(frequency))

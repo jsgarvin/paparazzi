@@ -10,8 +10,8 @@ to previously existing unchanged files, allowing for frequent backups to be made
 directories (see 'How it works' below). Older snapshots maintain versions of files as they existed
 at the time that snapshot was made.
 
-Paparazzi automatically purges out old hourly, daily, weekly, and monthly snapshots. Yearly
-snapshots are not automatically purged and need to be removed manually when necessary.
+Paparazzi automatically purges out old snapshots, and allows you to define how many of each snapshot
+to keep in reserve.
 
 Installation
 ------------
@@ -30,11 +30,24 @@ Create a ruby script that you'll run hourly from a cron.
     settings = {
       :source => '/full/path/to/source/directory/',           # note the trailing '/'
       :destination => '/mnt/external_drive/backup_folder',
-      :rsync_flags => '-L  --exclude lost+found'              # see 'man rsync' for available options.
-    }                                                         # Paparazzi sends '-aq --delete', plus whatever you add.
+      :rsync_flags => '-L --exclude lost+found'
+    }                                                         
 
     Paparazzi::Camera.trigger(settings)
     
+    
+Available Settings
+------------------
+
+  * `:source`      : **required** The source folder to be backed up. Trailing '/' recommended. See rsync manpage
+                     for explanation of trailing '/' 
+  * `:destination` : **required** The destination folder for backups to be written to, preferably on a different
+                     physical drive.
+  * `:reserves`    : A hash of snapshot intervals and number of snapshots of each to keep before purging.
+                     default: {:hourly => 24, :daily => 7, :weekly => 5, :monthly => 12, :yearly => 9999} 
+  * `:rsync_flags` : additional flags to pass to rsync. Paparazzi uses -aq, --delete, & --link_dest, plus
+                     whatever you add. The author suggests considering -L and --exclude.
+
 
 Supported Operating Systems
 ---------------------------

@@ -5,11 +5,10 @@ require 'digest/md5'
 
 module Paparazzi
   class Camera
-    FREQUENCIES = [:hourly,:daily,:weekly,:monthly,:yearly]
     REQUIRED_SETTINGS = [:source,:destination]
       
     class << self
-      attr_accessor :source, :destination, :rsync_flags
+      attr_accessor :source, :destination, :rsync_flags, :reserves
       
       def trigger(settings = {})
         validate_and_cache_settings(settings)
@@ -26,7 +25,7 @@ module Paparazzi
       #######
       
       def validate_and_cache_settings(settings)
-        [:source,:destination,:rsync_flags].each do |setting_name|
+        [:source,:destination,:rsync_flags,:reserves].each do |setting_name|
           if REQUIRED_SETTINGS.include?(setting_name) and settings[setting_name].nil?
             raise MissingSettingError, "#{setting_name} is required"
           else
@@ -43,16 +42,16 @@ module Paparazzi
       
       def setup
         @previous_snapshot_name = {}
-        FREQUENCIES.each do |frequency|
+        frequencies.each do |frequency|
           Dir.mkdir(destination(frequency)) unless File.exists?(destination(frequency)) && File.directory?(destination(frequency))
         
           full_path = Dir[destination(frequency)+'/*'].sort{|a,b| File.ctime(b) <=> File.ctime(a) }.first
           @previous_snapshot_name[frequency] = full_path ? File.basename(full_path) : ''
         end
         
-        if @previous_snapshot_name[:hourly] != last_successful_hourly_snapshot and !last_successful_hourly_snapshot.nil? and File.exists?(destination(:hourly) + '/' + last_successful_hourly_snapshot)
-          File.rename(previous_snapshot(:hourly), current_snapshot(:hourly))
-          @previous_snapshot_name[:hourly] = last_successful_hourly_snapshot
+        if @previous_snapshot_name[frequencies.first] != last_successful_snapshot and !last_successful_snapshot.nil? and File.exists?(destination(frequencies.first) + '/' + last_successful_snapshot)
+          File.rename(previous_snapshot(frequencies.first), current_snapshot(frequencies.first))
+          @previous_snapshot_name[frequencies.first] = last_successful_snapshot
         end
       end
       
@@ -60,20 +59,20 @@ module Paparazzi
         frequency.nil? ? @destination : "#{@destination}/#{frequency}"
       end
       
-      def last_successful_hourly_snapshot
-        @last_successful_hourly_snapshot ||= File.exists?("#{destination}/.paparazzi.yml") ? YAML.load_file("#{destination}/.paparazzi.yml")[:last_successful_snapshot] : nil
+      def last_successful_snapshot
+        @last_successful_snapshot ||= File.exists?("#{destination}/.paparazzi.yml") ? YAML.load_file("#{destination}/.paparazzi.yml")[:last_successful_snapshot] : nil
       end
       
-      def last_successful_hourly_snapshot=(string)
+      def last_successful_snapshot=(string)
         cached_data ||= File.exists?("#{destination}/.paparazzi.yml") ? YAML.load_file("#{destination}/.paparazzi.yml") : {}
         cached_data[:last_successful_snapshot] = string
         File.open("#{destination}/.paparazzi.yml", 'w') {|file| file.write(cached_data.to_yaml) }
       end
     
       def purge_old_snapshots
-        keepers = {:hourly => 24, :daily => 7, :weekly => 5, :monthly => 12}
-        keepers.keys.each do |frequency|
-          while Dir[destination(frequency)+'/*'].size > keepers[frequency]-1
+        frequencies.each do |frequency|
+          #raise RuntimeError, frequency if reserves[frequency].nil?
+          while Dir[destination(frequency)+'/*'].size > (reserves[frequency]-1)
             full_path = Dir[destination(frequency)+'/*'].sort{|a,b| File.ctime(a) <=> File.ctime(b) }.first
             FileUtils.rm_rf(full_path)
           end
@@ -81,14 +80,14 @@ module Paparazzi
       end
 
       def make_snapshots
-        FREQUENCIES.each do |frequency|
+        frequencies.each do |frequency|
           Dir.mkdir(current_snapshot(frequency)) unless File.exists?(current_snapshot(frequency))
-          if frequency == :hourly and previous_snapshot_name(frequency) == ''
+          if frequency == frequencies.first and previous_snapshot_name(frequency) == ''
             system 'rsync', *(['-aq', '--delete'] + rsync_flags + [source, current_snapshot(frequency)])
-            self.last_successful_hourly_snapshot = current_snapshot_name(:hourly)
+            self.last_successful_snapshot = current_snapshot_name(frequency)
           elsif previous_snapshot_name(frequency) != current_snapshot_name(frequency)
             system 'rsync', *(['-aq', '--delete', "--link-dest=#{link_destination(frequency)}"] + rsync_flags + [source, current_snapshot(frequency)])
-            self.last_successful_hourly_snapshot = current_snapshot_name(:hourly)
+            self.last_successful_snapshot = current_snapshot_name(frequencies.first)
           end
         end
       end
@@ -117,7 +116,17 @@ module Paparazzi
       end
       
       def link_destination(frequency)
-        frequency == :hourly ? "../#{previous_snapshot_name(:hourly)}" : "../../hourly/#{current_snapshot_name(:hourly)}"
+        frequency == frequencies.first ? "../#{previous_snapshot_name(frequencies.first)}" : "../../#{frequencies.first}/#{current_snapshot_name(frequencies.first)}"
+      end
+      
+      def reserves
+        @reserves ||= {:hourly => 24, :daily => 7, :weekly => 5, :monthly => 12, :yearly => 9999}
+      end
+      
+      def frequencies
+        reserves.keys.select{ |key| reserves[key] > 0 }.sort{ |a,b| 
+          [:hourly,:daily,:weekly,:monthly,:yearly].find_index(a) <=> [:hourly,:daily,:weekly,:monthly,:yearly].find_index(b)
+        }  
       end
       
     end

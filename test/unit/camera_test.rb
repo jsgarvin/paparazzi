@@ -3,9 +3,10 @@ require 'test/unit'
 require 'fileutils'
 
 class CameraTest < Test::Unit::TestCase
+  FREQUENCIES = [:hourly,:daily,:weekly,:monthly,:yearly]
   
   def setup
-    Paparazzi::Camera::FREQUENCIES.each do |frequency|
+    FREQUENCIES.each do |frequency|
       FileUtils.rm_rf("#{destination}/#{frequency}")
     end
     FileUtils.rm_rf("#{destination}/.paparazzi.yml")
@@ -31,18 +32,18 @@ class CameraTest < Test::Unit::TestCase
   end
   
   def test_should_create_frequency_folders_on_initialization
-    Paparazzi::Camera::FREQUENCIES.each do |frequency|
+    FREQUENCIES.each do |frequency|
       assert(!File.exists?("#{destination}/#{frequency}"))
     end
     Paparazzi::Camera.trigger(default_test_settings)
-    Paparazzi::Camera::FREQUENCIES.each do |frequency|
+    FREQUENCIES.each do |frequency|
       assert(File.exists?("#{destination}/#{frequency}"))
     end
   end
   
   def test_should_make_all_first_snapshots_of_source
     Paparazzi::Camera.trigger(default_test_settings)
-    Paparazzi::Camera::FREQUENCIES.each do |frequency|
+    FREQUENCIES.each do |frequency|
       assert(Dir["#{destination}/#{frequency}/*"].size > 0,"#{destination}/#{frequency}/ is empty")
       file = File.open(%Q{#{Dir["#{destination}/#{frequency}/*"].first}/test.txt})
       assert_equal('This is a test, this is only a test.',file.gets)
@@ -54,7 +55,7 @@ class CameraTest < Test::Unit::TestCase
     assert(YAML.load_file("#{destination}/.paparazzi.yml")[:last_successful_snapshot].match(/\d{4}-\d{2}-\d{2}\.\d{2}/))
   end
   
-  def test_purges_out_expired_snapshots
+  def test_should_purge_out_expired_snapshots
     Dir.mkdir("#{destination}/weekly")
     Dir.mkdir("#{destination}/weekly/1")
     sleep 1;
@@ -69,7 +70,7 @@ class CameraTest < Test::Unit::TestCase
     assert_not_equal(previous_folder_contents,Dir["#{destination}/weekly/*"])
   end
   
-  def test_gracefully_recovers_if_last_hourly_snapshot_ended_prematurely
+  def test_should_gracefully_recover_if_last_hourly_snapshot_ended_prematurely
     Paparazzi::Camera.instance_variable_set('@start_time',Time.now - 7200)
     Paparazzi::Camera.trigger(default_test_settings)
     successful_snapshot_name = Paparazzi::Camera.send(:current_snapshot_name,:hourly)
@@ -78,7 +79,7 @@ class CameraTest < Test::Unit::TestCase
     Paparazzi::Camera.trigger(default_test_settings)
     failed_snapshot_name = Paparazzi::Camera.send(:current_snapshot_name,:hourly)
     
-    Paparazzi::Camera.send(:last_successful_hourly_snapshot=,successful_snapshot_name)
+    Paparazzi::Camera.send(:last_successful_snapshot=,successful_snapshot_name)
     assert_equal(2,Dir["#{destination}/hourly/*"].size)
     assert_equal(successful_snapshot_name,YAML.load_file("#{destination}/.paparazzi.yml")[:last_successful_snapshot])
     
@@ -90,18 +91,25 @@ class CameraTest < Test::Unit::TestCase
     assert(!Dir["#{destination}/hourly/*"].include?("#{destination}/hourly/#{failed_snapshot_name}"))
   end
   
-  def test_correct_hard_links_are_created_to_multiple_snapshots_of_same_file
+  def test_should_create_hard_links_to_multiple_snapshots_of_same_file
     Paparazzi::Camera.trigger(default_test_settings)
     inode = File.stat("#{destination}/hourly/#{Paparazzi::Camera.send(:current_snapshot_name,:hourly)}/test.txt").ino
-    Paparazzi::Camera::FREQUENCIES.each do |frequency|
+    FREQUENCIES.each do |frequency|
       assert_equal(5,File.stat("#{destination}/#{frequency}/#{Paparazzi::Camera.send(:current_snapshot_name,frequency)}/test.txt").nlink)   
       assert_equal(inode,File.stat("#{destination}/#{frequency}/#{Paparazzi::Camera.send(:current_snapshot_name,frequency)}/test.txt").ino)
     end
   end
   
-  def test_excluded_files_are_not_backed_up
+  def test_should_not_backup_excluded_files
     Paparazzi::Camera.trigger(default_test_settings)
     assert(!File.exists?("#{destination}/hourly/#{Paparazzi::Camera.send(:current_snapshot_name,:hourly)}/test.exclude"))
+  end
+  
+  def test_should_not_make_un_requested_frequency_snapshots
+    my_settings = default_test_settings
+    my_settings[:reserves][:hourly] = 0
+    Paparazzi::Camera.trigger(my_settings)
+    assert(!File.exists?("#{destination}/hourly"))
   end
   
   #######
@@ -116,7 +124,9 @@ class CameraTest < Test::Unit::TestCase
     {
       :source => "#{File.expand_path('../../source',  __FILE__)}/",
       :destination => destination,
+      :reserves => {:hourly => 24, :daily => 7, :weekly => 5, :monthly => 12, :yearly => 9999},
       :rsync_flags => '-L --exclude test.exclude'
+      
     }
   end
 end

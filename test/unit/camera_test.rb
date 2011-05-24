@@ -95,7 +95,7 @@ class CameraTest < Test::Unit::TestCase
     inode = File.stat("#{destination}/hourly/#{Paparazzi::Camera.send(:current_snapshot_name,:hourly)}/test.txt").ino
     Paparazzi::Camera::FREQUENCIES.each do |frequency|
       assert_equal(5,File.stat("#{destination}/#{frequency}/#{Paparazzi::Camera.send(:current_snapshot_name,frequency)}/test.txt").nlink)   
-      inode = File.stat("#{destination}/#{frequency}/#{Paparazzi::Camera.send(:current_snapshot_name,frequency)}/test.txt").ino
+      assert_equal(inode,File.stat("#{destination}/#{frequency}/#{Paparazzi::Camera.send(:current_snapshot_name,frequency)}/test.txt").ino)
     end
   end
   

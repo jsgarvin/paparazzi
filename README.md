@@ -43,7 +43,7 @@ Available Settings
                      for explanation of trailing '/' 
   * `:destination` **required** The destination folder for backups to be written to, preferably on a different
                      physical drive.
-  * `:reserves`    A hash of snapshot intervals and number of snapshots of each to keep before purging.
+  * `:intervals`    A hash of snapshot intervals and number of snapshots of each to keep before purging.
                      default: `{:hourly => 24, :daily => 7, :weekly => 5, :monthly => 12, :yearly => 9999}` 
   * `:rsync_flags` Additional flags to pass to rsync. Paparazzi uses `-aq`, `--delete`, & `--link_dest`, plus
                      whatever you add. The author suggests considering `-L` and `--exclude`.

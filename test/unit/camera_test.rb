@@ -107,9 +107,22 @@ class CameraTest < Test::Unit::TestCase
   
   def test_should_not_make_un_requested_frequency_snapshots
     my_settings = default_test_settings
-    my_settings[:reserves][:hourly] = 0
+    my_settings[:intervals][:hourly] = 0
     Paparazzi::Camera.trigger(my_settings)
     assert(!File.exists?("#{destination}/hourly"))
+  end
+  
+  def test_should_be_backwards_compatible_with_deprecated_config_option
+    original_stderr, $stderr = $stderr, StringIO.new
+    my_settings = default_test_settings
+    my_settings[:reserves] = my_settings[:intervals]
+    my_settings[:reserves][:hourly] = 1
+    my_settings.delete(:intervals)
+    Paparazzi::Camera.trigger(my_settings)
+    assert_equal(my_settings[:reserves],Paparazzi::Camera.instance_variable_get('@intervals'))
+    assert_equal(':reserves is deprecated. Please use :intervals instead.',$stderr.string.chomp)
+  ensure
+    $stderr = original_stderr
   end
   
   #######
@@ -124,7 +137,7 @@ class CameraTest < Test::Unit::TestCase
     {
       :source => "#{File.expand_path('../../source',  __FILE__)}/",
       :destination => destination,
-      :reserves => {:hourly => 24, :daily => 7, :weekly => 5, :monthly => 12, :yearly => 9999},
+      :intervals => {:hourly => 24, :daily => 7, :weekly => 5, :monthly => 12, :yearly => 9999},
       :rsync_flags => '-L --exclude test.exclude'
       
     }

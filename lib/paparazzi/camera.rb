@@ -8,7 +8,7 @@ module Paparazzi
     REQUIRED_SETTINGS = [:source,:destination]
       
     class << self
-      attr_accessor :source, :destination, :rsync_flags, :reserves
+      attr_accessor :source, :destination, :rsync_flags, :intervals
       
       def trigger(settings = {})
         validate_and_cache_settings(settings)
@@ -25,7 +25,7 @@ module Paparazzi
       #######
       
       def validate_and_cache_settings(settings)
-        [:source,:destination,:rsync_flags,:reserves].each do |setting_name|
+        [:source,:destination,:rsync_flags,:intervals,:reserves].each do |setting_name|
           if REQUIRED_SETTINGS.include?(setting_name) and settings[setting_name].nil?
             raise MissingSettingError, "#{setting_name} is required"
           else
@@ -71,8 +71,7 @@ module Paparazzi
     
       def purge_old_snapshots
         frequencies.each do |frequency|
-          #raise RuntimeError, frequency if reserves[frequency].nil?
-          while Dir[destination(frequency)+'/*'].size > (reserves[frequency]-1)
+          while Dir[destination(frequency)+'/*'].size > (intervals[frequency]-1)
             full_path = Dir[destination(frequency)+'/*'].sort{|a,b| File.ctime(a) <=> File.ctime(b) }.first
             FileUtils.rm_rf(full_path)
           end
@@ -119,16 +118,23 @@ module Paparazzi
         frequency == frequencies.first ? "../#{previous_snapshot_name(frequencies.first)}" : "../../#{frequencies.first}/#{current_snapshot_name(frequencies.first)}"
       end
       
-      def reserves
-        @reserves ||= {:hourly => 24, :daily => 7, :weekly => 5, :monthly => 12, :yearly => 9999}
+      def intervals
+        @intervals ||= {:hourly => 24, :daily => 7, :weekly => 5, :monthly => 12, :yearly => 9999}
       end
       
       def frequencies
-        reserves.keys.select{ |key| reserves[key] > 0 }.sort{ |a,b| 
+        intervals.keys.select{ |key| intervals[key] > 0 }.sort{ |a,b| 
           [:hourly,:daily,:weekly,:monthly,:yearly].find_index(a) <=> [:hourly,:daily,:weekly,:monthly,:yearly].find_index(b)
         }  
       end
       
+      # provide backwards compatability with silly setting name
+      def reserves=(x)
+        if x.is_a?(Hash)
+          $stderr.puts ':reserves is deprecated. Please use :intervals instead.'
+          self.intervals=x 
+        end
+      end
     end
   end
   

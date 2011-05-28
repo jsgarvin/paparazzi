@@ -42,21 +42,21 @@ module Paparazzi
       
       def setup
         @previous_snapshot_name = {}
-        frequencies.each do |frequency|
-          Dir.mkdir(destination(frequency)) unless File.exists?(destination(frequency)) && File.directory?(destination(frequency))
+        interval_names.each do |interval_name|
+          Dir.mkdir(destination(interval_name)) unless File.exists?(destination(interval_name)) && File.directory?(destination(interval_name))
         
-          full_path = Dir[destination(frequency)+'/*'].sort{|a,b| File.ctime(b) <=> File.ctime(a) }.first
-          @previous_snapshot_name[frequency] = full_path ? File.basename(full_path) : ''
+          full_path = Dir[destination(interval_name)+'/*'].sort{|a,b| File.ctime(b) <=> File.ctime(a) }.first
+          @previous_snapshot_name[interval_name] = full_path ? File.basename(full_path) : ''
         end
         
-        if @previous_snapshot_name[frequencies.first] != last_successful_snapshot and !last_successful_snapshot.nil? and File.exists?(destination(frequencies.first) + '/' + last_successful_snapshot)
-          File.rename(previous_snapshot(frequencies.first), current_snapshot(frequencies.first))
-          @previous_snapshot_name[frequencies.first] = last_successful_snapshot
+        if @previous_snapshot_name[interval_names.first] != last_successful_snapshot and !last_successful_snapshot.nil? and File.exists?(destination(interval_names.first) + '/' + last_successful_snapshot)
+          File.rename(previous_snapshot(interval_names.first), current_snapshot(interval_names.first))
+          @previous_snapshot_name[interval_names.first] = last_successful_snapshot
         end
       end
       
-      def destination(frequency = nil)
-        frequency.nil? ? @destination : "#{@destination}/#{frequency}"
+      def destination(interval_name = nil)
+        interval_name.nil? ? @destination : "#{@destination}/#{interval_name}"
       end
       
       def last_successful_snapshot
@@ -70,34 +70,34 @@ module Paparazzi
       end
     
       def purge_old_snapshots
-        frequencies.each do |frequency|
-          while Dir[destination(frequency)+'/*'].size > (intervals[frequency]-1)
-            full_path = Dir[destination(frequency)+'/*'].sort{|a,b| File.ctime(a) <=> File.ctime(b) }.first
+        interval_names.each do |interval_name|
+          while Dir[destination(interval_name)+'/*'].size > (intervals[interval_name]-1)
+            full_path = Dir[destination(interval_name)+'/*'].sort{|a,b| File.ctime(a) <=> File.ctime(b) }.first
             FileUtils.rm_rf(full_path)
           end
         end
       end
 
       def make_snapshots
-        frequencies.each do |frequency|
-          Dir.mkdir(current_snapshot(frequency)) unless File.exists?(current_snapshot(frequency))
-          if frequency == frequencies.first and previous_snapshot_name(frequency) == ''
-            system 'rsync', *(['-aq', '--delete'] + rsync_flags + [source, current_snapshot(frequency)])
-            self.last_successful_snapshot = current_snapshot_name(frequency)
-          elsif previous_snapshot_name(frequency) != current_snapshot_name(frequency)
-            system 'rsync', *(['-aq', '--delete', "--link-dest=#{link_destination(frequency)}"] + rsync_flags + [source, current_snapshot(frequency)])
-            self.last_successful_snapshot = current_snapshot_name(frequencies.first)
+        interval_names.each do |interval_name|
+          Dir.mkdir(current_snapshot(interval_name)) unless File.exists?(current_snapshot(interval_name))
+          if interval_name == interval_names.first and previous_snapshot_name(interval_name) == ''
+            system 'rsync', *(['-aq', '--delete'] + rsync_flags + [source, current_snapshot(interval_name)])
+            self.last_successful_snapshot = current_snapshot_name(interval_name)
+          elsif previous_snapshot_name(interval_name) != current_snapshot_name(interval_name)
+            system 'rsync', *(['-aq', '--delete', "--link-dest=#{link_destination(interval_name)}"] + rsync_flags + [source, current_snapshot(interval_name)])
+            self.last_successful_snapshot = current_snapshot_name(interval_names.first)
           end
         end
       end
       
-      def current_snapshot(frequency)
-        destination(frequency) + '/' + current_snapshot_name(frequency)
+      def current_snapshot(interval_name)
+        destination(interval_name) + '/' + current_snapshot_name(interval_name)
       end
       
-      def current_snapshot_name(frequency)
+      def current_snapshot_name(interval_name)
         @start_time ||= Time.now #lock in time so that all results stay consistent over long runs
-        case frequency
+        case interval_name
           when :hourly  then @start_time.strftime('%Y-%m-%d.%H')
           when :daily   then @start_time.strftime('%Y-%m-%d')
           when :weekly  then sprintf("%04d-%02d-week-%02d", @start_time.year, @start_time.month, (@start_time.day/7))
@@ -106,23 +106,23 @@ module Paparazzi
         end
       end
       
-      def previous_snapshot(frequency)
-        destination(frequency) + '/' + previous_snapshot_name(frequency)
+      def previous_snapshot(interval_name)
+        destination(interval_name) + '/' + previous_snapshot_name(interval_name)
       end
       
-      def previous_snapshot_name(frequency)
-        @previous_snapshot_name[frequency]
+      def previous_snapshot_name(interval_name)
+        @previous_snapshot_name[interval_name]
       end
       
-      def link_destination(frequency)
-        frequency == frequencies.first ? "../#{previous_snapshot_name(frequencies.first)}" : "../../#{frequencies.first}/#{current_snapshot_name(frequencies.first)}"
+      def link_destination(interval_name)
+        interval_name == interval_names.first ? "../#{previous_snapshot_name(interval_names.first)}" : "../../#{interval_names.first}/#{current_snapshot_name(interval_names.first)}"
       end
       
       def intervals
         @intervals ||= {:hourly => 24, :daily => 7, :weekly => 5, :monthly => 12, :yearly => 9999}
       end
       
-      def frequencies
+      def interval_names
         intervals.keys.select{ |key| intervals[key] > 0 }.sort{ |a,b| 
           [:hourly,:daily,:weekly,:monthly,:yearly].find_index(a) <=> [:hourly,:daily,:weekly,:monthly,:yearly].find_index(b)
         }  

@@ -10,8 +10,8 @@ to previously existing unchanged files, allowing for frequent backups to be made
 directories (see 'How it works' below). Older snapshots maintain versions of files as they existed
 at the time that snapshot was made.
 
-Paparazzi automatically purges out old snapshots, and allows you to define how many of each snapshot
-to keep in reserve.
+Paparazzi automatically purges out old snapshots, and allows you to define how many copies at each
+interval to keep.
 
 Installation
 ------------
@@ -53,7 +53,7 @@ Supported Operating Systems
 ---------------------------
 
 Paparazzi is developed and tested on Ubuntu Linux and should work fine on all other flavors. As of version 0.1.1, all
-tests reportedly passed on Max OSX, and it is expected that Paparazzi will probably run very well in that environment
+tests reportedly passed on Mac OSX, and it is expected that Paparazzi will probably run very well in that environment
 (although it is not actively tested, so run at your own risk).
 
 It is highly unlikely that Paparazzi will run on an MS Windows based machine without a whole lot of TLC by the user,

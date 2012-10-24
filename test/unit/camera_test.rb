@@ -75,22 +75,21 @@ class CameraTest < Test::Unit::TestCase
     Paparazzi::Camera.trigger(default_test_settings)
     successful_snapshot_name = Paparazzi::Camera.send(:current_snapshot_name,:hourly)
 
+    #slow test down to compensate for OSs (eg. Mac) that don't track ctime to nsec precision
+    sleep 1 unless File.ctime(Paparazzi::Camera.send(:destination,:hourly)).nsec > 0
+
     Paparazzi::Camera.instance_variable_set('@start_time',Time.now - 3600)
     Paparazzi::Camera.trigger(default_test_settings)
     failed_snapshot_name = Paparazzi::Camera.send(:current_snapshot_name,:hourly)
+
+    #slow test down to compensate for OSs (eg. Mac) that don't track ctime to nsec precision
+    sleep 1 unless File.ctime(Paparazzi::Camera.send(:destination,:hourly)).nsec > 0
 
     Paparazzi::Camera.send(:last_successful_snapshot=,successful_snapshot_name)
     assert_equal(2,Dir["#{destination}/hourly/*"].size)
     assert_equal(successful_snapshot_name,YAML.load_file("#{destination}/.paparazzi.yml")[:last_successful_snapshot])
 
     Paparazzi::Camera.instance_variable_set('@start_time',Time.now)
-    ### Start Extra Assertions to try and narrow down Issue #1
-    ### https://github.com/jsgarvin/paparazzi/issues/1
-    assert(Paparazzi::Camera.send(:current_snapshot_name,:hourly) != Paparazzi::Camera.send(:last_successful_snapshot), "current snapshot name should not equal last successful snapshot: #{Paparazzi::Camera.send(:last_successful_snapshot)}")
-    assert_not_nil(Paparazzi::Camera.send(:last_successful_snapshot), "last successful snapshot should not be nil")
-    hourly_snapshot_filename = Paparazzi::Camera.send(:destination,'hourly') + '/' + Paparazzi::Camera.send(:last_successful_snapshot)
-    assert(File.exists?(hourly_snapshot_filename), "File unexpectedly doesn't exist: #{hourly_snapshot_filename}")
-    ### End Extra Assertions for Issue #1
     Paparazzi::Camera.trigger(default_test_settings)
 
     assert_equal(2,Dir["#{destination}/hourly/*"].size)
